@@ -30,6 +30,14 @@ uint64_t getPagemapRaw(int pagemap_fd, uint64_t addr){
     uint64_t pagemapraw = vmem_pagemap(pagemap_fd, addr >> 12);
 }
 
+uint64_t binaryToDecimal(int* binary, int length){
+    uint64_t result = 0;
+    for(int i = 0; i < length; i++){
+        result = result + (binary[i] * pow(2,i));
+    }
+    return result;
+}
+
 
 int main(int argc, char *argv[]){
     //TODO: Hexadecimal-to-decimal converter func lazım. Hex girilirse ilk ceviricez...
@@ -120,9 +128,35 @@ int main(int argc, char *argv[]){
 
         uint64_t vpn = vmem_getVPN(virtual_address);
         uint64_t pagemapRaw = getPagemapRaw(pagemap_fd, virtual_address);
+        uint64_t pagemapRawCopy = pagemapRaw;
+
+        int pagemapBinary[64], i;
+
+        for(i = 0; pagemapRawCopy > 0; i++){
+            pagemapBinary[i] = pagemapRawCopy%2;
+            pagemapRawCopy = pagemapRawCopy / 2;
+        }
+
+        int binaryPFN[55];
+        for(int k = 0; k < 55; k++){
+            binaryPFN[k] = pagemapBinary[k]; 
+        }
+
+        uint64_t decimalPFN = binaryToDecimal(binaryPFN, 55);
 
         printf("Virtual address: %#016lx\n", virtual_address);
-        printf("Pagemapraw: %ldn", pagemapRaw);
+        printf("Physical Frame Number: %#010lx\n", decimalPFN);
+        printf("Page Present: %d (", pagemapBinary[63]);
+        if(pagemapBinary[63] == 1){
+            printf("YES)\n");
+        } 
+        else if(pagemapBinary[63] == 0){
+            printf("NO)\n");
+        }
+        uint64_t swapOffset = decimalPFN >> 5;
+        printf("Swap Offset: %#01lx\n", swapOffset);
+
+        close(pagemap_fd);
     }
     else if (strcmp(argv[1], "-maprange") == 0){
         printf("6\n");
