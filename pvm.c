@@ -115,8 +115,8 @@ int main(int argc, char *argv[])
         unsigned long pid = strtoul(argv[2], NULL, 0);
 
         FILE *fp;
-        char word[40];
-        char buf[50];
+        char *word = (char*) malloc(50*sizeof(char));
+        char *buf = (char*) malloc(50*sizeof(char));
         snprintf(buf, 50, "/proc/%lu/maps", pid);
         fp = fopen(buf, "r");
         if(fp == NULL){
@@ -243,6 +243,8 @@ int main(int argc, char *argv[])
             printf("Physical memory usage/size for EXCLUSIVELY MAPPED PAGES is: %d KB \n", exclusive_result);
             printf("Physical memory usage/size for ALL PROCESSPAGES is: %d KB \n", all_pages_result);
         }
+        free(word);
+        free(buf);
 
         fclose(fp);    
     }
@@ -354,7 +356,7 @@ int main(int argc, char *argv[])
         close(pagemap_fd);
     }
 
-    if(strcmp(argv[1], "-maprange") == 0){
+    else if(strcmp(argv[1], "-maprange") == 0){
         long va1 = (long)strtol(argv[3], NULL, 16);
         long va2 = (long)strtol(argv[4], NULL, 16);
         long tempVa = va1;
@@ -365,6 +367,8 @@ int main(int argc, char *argv[])
         long fd;
         unsigned char buffer[64];
         bool unused = true;
+        uint64_t retval;
+
         
         char la[20];
         char ua[20];
@@ -386,7 +390,7 @@ int main(int argc, char *argv[])
         fd = open(dir2, O_RDONLY);
 
         while(tempVa < va2){
-            offset = tempVa % 0x1000;
+            offset = (tempVa / 0x1000) * 8;
             lseek(fd, offset, SEEK_SET);
 
             frameNum = 0;
@@ -395,6 +399,9 @@ int main(int argc, char *argv[])
             read(fd, buffer, 64);
             for(int j = 0; j<64; j++)
                 frameNum += (pow(2, (63 - j))) * buffer[j];
+
+            read(fd, &retval, sizeof(uint64_t));
+            
 
             pageNum = tempVa / 0x1000;
 
@@ -447,10 +454,10 @@ int main(int argc, char *argv[])
 
             if(unused)
                 printf("PN: %ld, FN: unused\n", pageNum);
-            else if( frameNum == 0)
+            else if( retval == 0)
                 printf("PN: %ld, FN: not-in-memory\n", pageNum);
             else
-                printf("PN: %ld, FN: %ld\n", pageNum, frameNum);
+                printf("PN: %ld, FN: %lu\n", pageNum, retval);
 
             tempVa += 0x1000;
         }
@@ -468,6 +475,7 @@ int main(int argc, char *argv[])
         long pageNum = 0;
         long fd;
         unsigned char buffer[64];
+        uint64_t retval;
         
         char la[20];
         char ua[20];
@@ -519,7 +527,7 @@ int main(int argc, char *argv[])
                 tempVa = laH;
 
                 while(tempVa < uaH){
-                    offset = tempVa % 0x1000;
+                    offset = (tempVa / 0x1000) * 8;
                     lseek(fd, offset, SEEK_SET);
 
                     frameNum = 0;
@@ -528,12 +536,14 @@ int main(int argc, char *argv[])
                     for(int j = 0; j<64; j++)
                         frameNum += (pow(2, (63 - j))) * buffer[j];
 
+                    read(fd, &retval, sizeof(uint64_t));
+
                     pageNum = tempVa / 0x1000;
                 
-                    if( frameNum == 0)
+                    if( retval == 0)
                         printf("PN: %ld, FN: not-in-memory\n", pageNum);
                     else
-                        printf("PN: %ld, FN: %ld\n", pageNum, frameNum);
+                        printf("PN: %ld, FN: %lu\n", pageNum, retval);
 
                     tempVa += 0x1000;
                 }
@@ -562,6 +572,7 @@ int main(int argc, char *argv[])
         long pageNum = 0;
         long fd;
         unsigned char buffer[64];
+        uint64_t retval;
 
         char la[20];
         char ua[20];
@@ -613,7 +624,7 @@ int main(int argc, char *argv[])
                 tempVa = laH;
 
                 while(tempVa < uaH){
-                    offset = tempVa % 0x1000;
+                    offset = (tempVa / 0x1000) * 8;
                     lseek(fd, offset, SEEK_SET);
 
                     frameNum = 0;
@@ -622,10 +633,12 @@ int main(int argc, char *argv[])
                     for(int j = 0; j<64; j++)
                         frameNum += (pow(2, (63 - j))) * buffer[j];
 
+                    read(fd, &retval, sizeof(uint64_t));
+
                     pageNum = tempVa / 0x1000;
                 
-                    if( frameNum != 0)
-                        printf("PN: %ld, FN: %ld\n", pageNum, frameNum);
+                    if( retval != 0)
+                        printf("PN: %ld, FN: %lu\n", pageNum, retval);
 
                     tempVa += 0x1000;
                 }
