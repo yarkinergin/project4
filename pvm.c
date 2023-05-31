@@ -463,6 +463,7 @@ int main(int argc, char *argv[])
         }
 
         close(fd);
+        fclose(ptr);
 
         free(dir);
         free(dir2);
@@ -560,6 +561,7 @@ int main(int argc, char *argv[])
         } while (ch != EOF);
 
         close(fd);
+        fclose(ptr);
 
         free(dir);
         free(dir2);
@@ -655,6 +657,7 @@ int main(int argc, char *argv[])
         } while (ch != EOF);
 
         close(fd);
+        fclose(ptr);
 
         free(dir);
         free(dir2);
@@ -725,9 +728,8 @@ int main(int argc, char *argv[])
         printf("%ld kb\n", (sum * 4));
 
         free(dir);
+        fclose(ptr);
     }
-    
-    fclose(ptr);
 
     return 0;
 }
