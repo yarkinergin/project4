@@ -111,7 +111,60 @@ int main(int argc, char *argv[]){
         
     }
     else if (strcmp(argv[1], "-mapva") == 0){
+        pid_t pid = strtoul(argv[2], NULL, 0);
+        uint64_t virtual_address = strtoul(argv[3], NULL, 0);
 
+        char pagemap_path[256];
+        snprintf(pagemap_path, sizeof(pagemap_path), "/proc/%d/pagemap", pid);
+
+        int pagemap_fd = open(pagemap_path, O_RDONLY);
+        if (pagemap_fd == -1) {
+            perror("Failed to open pagemap file");
+            exit(EXIT_FAILURE);
+        }
+
+        uint64_t pagemapRaw = 0;
+        uint64_t vpn = vmem_getVPN(virtual_address);
+        pagemapRaw = getPagemapRaw(pagemap_fd, virtual_address);
+        if(pagemapRaw == 0){
+            printf("Page is not found, perhaps doesn't exist!..");
+            close(pagemap_fd);
+            return 1;
+        }
+        uint64_t pagemapRawCopy = pagemapRaw;
+
+        int pagemapBinary[64], i;
+
+        for(i = 0; pagemapRawCopy > 0; i++){
+            pagemapBinary[i] = pagemapRawCopy%2;
+            pagemapRawCopy = pagemapRawCopy / 2;
+        }
+
+        int binaryPFN[55];
+        for(int k = 0; k < 55; k++){
+            binaryPFN[k] = pagemapBinary[k]; 
+        }
+
+        uint64_t decimalPFN = binaryToDecimal(binaryPFN, 55);
+
+        int binaryVA[64], o;
+        uint64_t virtualAddrCopy = virtual_address;
+        for(o = 0; virtualAddrCopy > 0; o++){
+            binaryVA[o] = virtualAddrCopy%2;
+            virtualAddrCopy = virtualAddrCopy / 2;
+        }
+
+        int vaOffsetBinary[12];
+        for(int k = 0; k < 12; k++){
+            vaOffsetBinary[k] = binaryVA[k];
+        }
+
+        uint64_t decimalVAOffset = binaryToDecimal(vaOffsetBinary, 12);
+        uint64_t physical_address_decimal = decimalPFN + decimalVAOffset;
+
+        printf("Physical Address: %#016lx\n", physical_address_decimal);
+
+        close(pagemap_fd);
     }
     else if (strcmp(argv[1], "-pte") == 0){
         pid_t pid = strtoul(argv[2], NULL, 0);
@@ -126,8 +179,14 @@ int main(int argc, char *argv[]){
             exit(EXIT_FAILURE);
         }
 
+        uint64_t pagemapRaw = 0;
         uint64_t vpn = vmem_getVPN(virtual_address);
-        uint64_t pagemapRaw = getPagemapRaw(pagemap_fd, virtual_address);
+        pagemapRaw = getPagemapRaw(pagemap_fd, virtual_address);
+        if(pagemapRaw == 0){
+            printf("Page is not found, perhaps doesn't exist!..");
+            close(pagemap_fd);
+            return 1;
+        }
         uint64_t pagemapRawCopy = pagemapRaw;
 
         int pagemapBinary[64], i;
